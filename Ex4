@@ -1,0 +1,77 @@
+
+import numpy as np
+# Activation functions
+def relu(x): return np.maximum(0, x)
+def relu_derivative(x): return (x > 0).astype(float)
+
+def tanh(x): return np.tanh(x)
+def tanh_derivative(x): return 1 - np.tanh(x)**2
+
+def softmax(x):
+    exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+    return exp_x / np.sum(exp_x, axis=1, keepdims=True)
+
+# Training data
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+y = np.array([
+    [1,0,0], 
+    [0,1,0], 
+    [0,0,1], 
+    [1,0,0]  
+])
+
+# Network architecture: input → hidden1 → hidden2 → output(3 classes)
+layers = [2, 4, 3, 3]   
+activations = ["relu", "tanh", "softmax"]
+lr = 0.44
+epochs = 10
+
+# Initialize weights and biases
+np.random.seed(42)
+weights = [np.random.randn(layers[i], layers[i+1]) for i in range(len(layers)-1)]
+biases  = [np.zeros((1, layers[i+1])) for i in range(len(layers)-1)]
+# Training loop
+for epoch in range(epochs):
+    # Forward pass
+    zs, activs = [], [X]
+    for i in range(len(weights)):
+        z = activs[-1].dot(weights[i]) + biases[i]
+        zs.append(z)
+        if activations[i] == "relu":
+            a = relu(z)
+        elif activations[i] == "tanh":
+            a = tanh(z)
+        elif activations[i] == "softmax":
+            a = softmax(z)
+        activs.append(a)
+
+    # Error (target - output)
+    error = y - activs[-1]
+
+    # Backpropagation
+    grads_w, grads_b = [None]*len(weights), [None]*len(biases)
+    delta = error   # directly use error at output layer
+
+    for i in reversed(range(len(weights))):
+        grads_w[i] = activs[i].T.dot(delta)
+        grads_b[i] = np.sum(delta, axis=0, keepdims=True)
+
+        if i > 0:
+            if activations[i-1] == "relu":
+                delta = delta.dot(weights[i].T) * relu_derivative(zs[i-1])
+            elif activations[i-1] == "tanh":
+                delta = delta.dot(weights[i].T) * tanh_derivative(zs[i-1])
+
+    # Update weights
+    for i in range(len(weights)):
+        weights[i] += lr * grads_w[i]   
+        biases[i]  += lr * grads_b[i]
+
+# Print final results
+print(f"Total Epochs: {epochs}")
+print("Final Derived Output:\n", activs[-1])
+print("Final Error:\n", error)
+for i, w in enumerate(weights):
+    print(f"Final Updated Weights W{i+1}:\n", w)
+for i, b in enumerate(biases):
+    print(f"Final Updated Biases b{i+1}:\n", b)
